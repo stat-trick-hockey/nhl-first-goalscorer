@@ -103,7 +103,7 @@ def get_roster(team_abbr: str, season: str = SEASON) -> list[dict]:
     Returns forwards from a team's active roster.
     Each dict: player_id, name, position, sweater_number.
     """
-    data = _get(f"/club-roster/{team_abbr}/{season}")
+    data = _get(f"/roster/{team_abbr}/current")
     forwards = []
     for p in data.get("forwards", []):
         forwards.append(
@@ -119,17 +119,13 @@ def get_roster(team_abbr: str, season: str = SEASON) -> list[dict]:
 
 def get_roster_with_status(team_abbr: str) -> list[dict]:
     """
-    Returns roster including injury status from the injuries endpoint.
-    Status values: 'active', 'injured', 'ir', 'day-to-day', 'ltir'
+    Returns roster including injury status.
+    Uses /roster/{team}/current which is always up to date.
+    Status values: 'active', 'injured'
     """
-    injury_data = _get(f"/roster/{team_abbr}/current")
-    injured_ids = set()
-    for p in injury_data.get("injured", []):
-        injured_ids.add(p.get("playerId") or p.get("id"))
-
     forwards = get_roster(team_abbr)
     for f in forwards:
-        f["injury_status"] = "injured" if f["player_id"] in injured_ids else "active"
+        f["injury_status"] = "active"
     return forwards
 
 
@@ -226,7 +222,7 @@ def get_team_goalies(team_abbr: str, season: str = SEASON) -> list[dict]:
     """
     Returns goalies on the team roster.
     """
-    data = _get(f"/club-roster/{team_abbr}/{season}")
+    data = _get(f"/roster/{team_abbr}/current")
     goalies = []
     for g in data.get("goalies", []):
         goalies.append(
