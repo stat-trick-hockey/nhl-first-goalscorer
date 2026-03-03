@@ -1,0 +1,11 @@
+# This directory stores:
+#   training_data.csv    — scraped historical first-goalscorer data (ML training)
+#   ml_model.pkl         — trained GradientBoostingClassifier
+#   ml_scaler.pkl        — StandardScaler for feature normalization
+#   model_metrics.json   — training/CV metrics from last retrain
+#   accuracy_log.jsonl   — daily prediction accuracy records
+#
+# Files are created automatically by:
+#   python -m nhl_predictor.cli scrape   → training_data.csv
+#   python -m nhl_predictor.cli train    → ml_model.pkl, ml_scaler.pkl, model_metrics.json
+#   python -m nhl_predictor.cli track    → accuracy_log.jsonl

@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.vscode/
+.idea/
+*.swp
+.DS_Store
+*.log
+
+# Keep data dir but ignore large training CSV from default tracking
+# (uncomment to exclude from git — large files after a full season scrape)
+# data/training_data.csv
+
+# Keep picks JSON in git (small, committed by bot)
+# Ignore any local test picks
+picks/local_*.json
+
+.env
+.env.*
+!.env.example

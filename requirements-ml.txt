@@ -1,0 +1,4 @@
+# ML model training and inference
+# Install when you have enough scraped data to train:
+#   pip install -r requirements-ml.txt
+scikit-learn>=1.4.0

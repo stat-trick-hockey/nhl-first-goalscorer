@@ -1,0 +1,56 @@
+name: 🤖 Weekly ML Retrain
+
+on:
+  schedule:
+    - cron: '0 10 * * 1'   # Every Monday 10:00 UTC (5 AM ET)
+  workflow_dispatch:
+    inputs:
+      cv:
+        description: 'Run cross-validation?'
+        required: false
+        default: 'true'
+
+jobs:
+  retrain:
+    name: Scrape recent data + retrain model
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-ml.txt
+
+      - name: Scrape last 14 days of games
+        run: python -m nhl_predictor.cli scrape --days-back 14 --delay 0.6
+
+      - name: Retrain model
+        run: |
+          CV_FLAG=""
+          if [ "${{ github.event.inputs.cv || 'true' }}" = "true" ]; then
+            CV_FLAG="--cv"
+          fi
+          python -m nhl_predictor.cli train $CV_FLAG --feature-importance
+
+      - name: Commit updated model + training data
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "🤖 Model retrain $(date +%Y-%m-%d)"
+          file_pattern: 'data/ml_model.pkl data/ml_scaler.pkl data/model_metrics.json data/training_data.csv'
+          commit_user_name: 'nhl-picks-bot'
+          commit_user_email: 'nhl-picks-bot@users.noreply.github.com'
+
+      - name: Upload model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ml-model-${{ github.run_id }}
+          path: |
+            data/ml_model.pkl
+            data/ml_scaler.pkl
+            data/model_metrics.json
+          retention-days: 30
