@@ -11,8 +11,8 @@ from typing import Optional
 import requests
 
 NHL_BASE = "https://api-web.nhle.com/v1"
-SEASON = "20242025"
-PREV_SEASON = "20232024"
+SEASON = "20252026"
+PREV_SEASON = "20242025"
 
 _session = requests.Session()
 _session.headers.update({"User-Agent": "NHL-FirstGoal-Predictor/2.0"})
