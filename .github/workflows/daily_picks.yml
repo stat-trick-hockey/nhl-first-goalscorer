@@ -1,8 +1,8 @@
-name: 🏒 Daily First Goalscorer Picks
+name: Daily First Goalscorer Picks
 
 on:
   schedule:
-    - cron: '0 12 * * *'   # 7:00 AM ET = 12:00 UTC
+    - cron: '0 12 * * *'
   workflow_dispatch:
     inputs:
       date:
@@ -18,6 +18,9 @@ jobs:
   predict:
     name: Generate picks
     runs-on: ubuntu-latest
+    outputs:
+      target_date: ${{ steps.date.outputs.target }}
+      picks_created: ${{ steps.picks.outputs.picks_created }}
 
     steps:
       - uses: actions/checkout@v4
@@ -60,9 +63,7 @@ jobs:
                   games = [g for g in day.get('games', []) if g.get('gameType', 2) in (2, 3)]
           print(f'Games found: {len(games)}')
           for g in games:
-              print(f'  {g[\"awayTeam\"][\"abbrev\"]} @ {g[\"homeTeam\"][\"abbrev\"]}')
-          if not games:
-              print('WARNING: No games scheduled -- picks file will not be created')
+              print(f'  {g[chr(34)]awayTeam[chr(34)][chr(34)]abbrev[chr(34)]} @ {g[chr(34)]homeTeam[chr(34)][chr(34)]abbrev[chr(34)]}')
           "
 
       - name: Generate picks
@@ -70,34 +71,23 @@ jobs:
         run: |
           TARGET="${{ steps.date.outputs.target }}"
           TOP="${{ github.event.inputs.top || '5' }}"
-          DATE_ARG="--date $TARGET"
-
           echo "Generating picks for $TARGET (top $TOP)..."
-
-          # Run prediction -- table output to logs for visibility
-          python -m nhl_predictor.cli predict $DATE_ARG --top $TOP
-
-          # Run again saving JSON to picks/
-          python -m nhl_predictor.cli predict $DATE_ARG --top $TOP --output json --save
-
-          # Verify the file was created
+          python -m nhl_predictor.cli predict --date $TARGET --top $TOP
+          python -m nhl_predictor.cli predict --date $TARGET --top $TOP --output json --save
           PICKS_FILE="picks/$TARGET.json"
           if [ -f "$PICKS_FILE" ]; then
             echo "picks_created=true" >> $GITHUB_OUTPUT
-            echo "picks_file=$PICKS_FILE" >> $GITHUB_OUTPUT
-            echo ""
-            echo "=== picks/$TARGET.json ==="
             cat "$PICKS_FILE"
           else
             echo "picks_created=false" >> $GITHUB_OUTPUT
-            echo "WARNING: picks file was not created -- likely no games today or API error"
+            echo "WARNING: picks file was not created"
           fi
 
       - name: Commit picks
         if: steps.picks.outputs.picks_created == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "📊 Picks ${{ steps.date.outputs.target }}"
+          commit_message: "Picks ${{ steps.date.outputs.target }}"
           file_pattern: 'picks/*.json'
           commit_user_name: 'nhl-picks-bot'
           commit_user_email: 'nhl-picks-bot@users.noreply.github.com'
@@ -110,17 +100,15 @@ jobs:
           path: picks/${{ steps.date.outputs.target }}.json
           retention-days: 90
 
-      - name: No games today
+      - name: No games
         if: steps.picks.outputs.picks_created != 'true'
-        run: |
-          echo "No picks file generated for ${{ steps.date.outputs.target }}."
-          echo "This is expected on days with no NHL games."
+        run: echo "No picks for ${{ steps.date.outputs.target }} -- no games or API error."
 
-  # --- Track yesterday's accuracy -------------------------------------------
   track:
-    name: Track yesterday's accuracy
+    name: Track accuracy
     runs-on: ubuntu-latest
     needs: predict
+    if: needs.predict.outputs.picks_created == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -134,22 +122,23 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Evaluate yesterday
-        run: python -m nhl_predictor.cli track
+      - name: Evaluate picks
+        run: python -m nhl_predictor.cli track --date ${{ needs.predict.outputs.target_date }}
 
       - name: Commit accuracy log
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "📈 Accuracy log update"
+          commit_message: "Accuracy log ${{ needs.predict.outputs.target_date }}"
           file_pattern: 'data/accuracy_log.jsonl'
           commit_user_name: 'nhl-picks-bot'
           commit_user_email: 'nhl-picks-bot@users.noreply.github.com'
+
   deploy:
-      name: Deploy GitHub Pages
-      needs: [predict, track]
-      if: always() && needs.predict.outputs.picks_created == 'true'
-      uses: ./.github/workflows/pages.yml
-      permissions:
-        contents: read
-        pages: write
-        id-token: write
+    name: Deploy GitHub Pages
+    needs: [predict, track]
+    if: always() && needs.predict.outputs.picks_created == 'true'
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
