@@ -144,3 +144,11 @@ jobs:
           file_pattern: 'data/accuracy_log.jsonl'
           commit_user_name: 'nhl-picks-bot'
           commit_user_email: 'nhl-picks-bot@users.noreply.github.com'
+  deploy:
+      name: Deploy GitHub Pages
+      needs: [predict, track]
+      if: always() && needs.predict.outputs.picks_created == 'true'
+      uses: ./.github/workflows/pages.yml
+      permissions:
+        pages: write
+        id-token: write
