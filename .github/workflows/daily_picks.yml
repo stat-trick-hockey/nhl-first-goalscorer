@@ -55,19 +55,7 @@ jobs:
           TARGET="${{ steps.date.outputs.target }}"
           echo "Checking NHL schedule for $TARGET..."
           curl -s "https://api-web.nhle.com/v1/schedule/$TARGET" > /tmp/schedule.json
-          python3 -c "
-import json
-with open('/tmp/schedule.json') as f:
-    data = json.load(f)
-target = '$TARGET'
-games = []
-for day in data.get('gameWeek', []):
-    if day.get('date') == target:
-        games = [g for g in day.get('games', []) if g.get('gameType', 2) in (2, 3)]
-print('Games found:', len(games))
-for g in games:
-    print(' ', g['awayTeam']['abbrev'], '@', g['homeTeam']['abbrev'])
-"
+          python3 scripts/check_schedule.py "$TARGET"
 
       - name: Generate picks
         id: picks
