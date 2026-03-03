@@ -106,6 +106,9 @@ jobs:
         with:
           ref: main
 
+      - name: Pull latest (picks commit may have moved HEAD)
+        run: git pull origin main
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
