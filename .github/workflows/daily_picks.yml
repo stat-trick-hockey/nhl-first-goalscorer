@@ -150,5 +150,6 @@ jobs:
       if: always() && needs.predict.outputs.picks_created == 'true'
       uses: ./.github/workflows/pages.yml
       permissions:
+        contents: read
         pages: write
         id-token: write
