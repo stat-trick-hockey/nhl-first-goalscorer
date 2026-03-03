@@ -30,7 +30,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          # Install ML deps if model file exists
           if [ -f data/ml_model.pkl ]; then
             pip install -r requirements-ml.txt
           fi
@@ -38,40 +37,86 @@ jobs:
       - name: Validate model
         run: python -m nhl_predictor.cli validate
 
+      - name: Resolve target date
+        id: date
+        run: |
+          INPUT="${{ github.event.inputs.date }}"
+          if [ -n "$INPUT" ]; then
+            echo "target=$INPUT" >> $GITHUB_OUTPUT
+          else
+            echo "target=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check NHL schedule
+        run: |
+          TARGET="${{ steps.date.outputs.target }}"
+          echo "Checking NHL schedule for $TARGET..."
+          curl -s "https://api-web.nhle.com/v1/schedule/$TARGET" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          games = []
+          for day in data.get('gameWeek', []):
+              if day.get('date') == '$TARGET':
+                  games = [g for g in day.get('games', []) if g.get('gameType', 2) in (2, 3)]
+          print(f'Games found: {len(games)}')
+          for g in games:
+              print(f'  {g[\"awayTeam\"][\"abbrev\"]} @ {g[\"homeTeam\"][\"abbrev\"]}')
+          if not games:
+              print('WARNING: No games scheduled -- picks file will not be created')
+          "
+
       - name: Generate picks
         id: picks
         run: |
-          DATE="${{ github.event.inputs.date }}"
+          TARGET="${{ steps.date.outputs.target }}"
           TOP="${{ github.event.inputs.top || '5' }}"
-          DATE_ARG=""
-          if [ -n "$DATE" ]; then DATE_ARG="--date $DATE"; fi
+          DATE_ARG="--date $TARGET"
 
-          TARGET=$(python3 -c "
-          d = '${{ github.event.inputs.date }}'
-          print(d if d else __import__('datetime').datetime.today().strftime('%Y-%m-%d'))
-          ")
-          echo "target_date=$TARGET" >> $GITHUB_OUTPUT
+          echo "Generating picks for $TARGET (top $TOP)..."
 
-          # JSON to file + table to logs
-          python -m nhl_predictor.cli predict $DATE_ARG --top $TOP --output json --save
+          # Run prediction -- table output to logs for visibility
           python -m nhl_predictor.cli predict $DATE_ARG --top $TOP
 
+          # Run again saving JSON to picks/
+          python -m nhl_predictor.cli predict $DATE_ARG --top $TOP --output json --save
+
+          # Verify the file was created
+          PICKS_FILE="picks/$TARGET.json"
+          if [ -f "$PICKS_FILE" ]; then
+            echo "picks_created=true" >> $GITHUB_OUTPUT
+            echo "picks_file=$PICKS_FILE" >> $GITHUB_OUTPUT
+            echo ""
+            echo "=== picks/$TARGET.json ==="
+            cat "$PICKS_FILE"
+          else
+            echo "picks_created=false" >> $GITHUB_OUTPUT
+            echo "WARNING: picks file was not created -- likely no games today or API error"
+          fi
+
       - name: Commit picks
+        if: steps.picks.outputs.picks_created == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "📊 Picks ${{ steps.picks.outputs.target_date }}"
+          commit_message: "📊 Picks ${{ steps.date.outputs.target }}"
           file_pattern: 'picks/*.json'
           commit_user_name: 'nhl-picks-bot'
           commit_user_email: 'nhl-picks-bot@users.noreply.github.com'
 
       - name: Upload artifact
+        if: steps.picks.outputs.picks_created == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: picks-${{ steps.picks.outputs.target_date }}
-          path: picks/${{ steps.picks.outputs.target_date }}.json
+          name: picks-${{ steps.date.outputs.target }}
+          path: picks/${{ steps.date.outputs.target }}.json
           retention-days: 90
 
-  # ── Track yesterday's accuracy after today's picks ────────────────────────
+      - name: No games today
+        if: steps.picks.outputs.picks_created != 'true'
+        run: |
+          echo "No picks file generated for ${{ steps.date.outputs.target }}."
+          echo "This is expected on days with no NHL games."
+
+  # --- Track yesterday's accuracy -------------------------------------------
   track:
     name: Track yesterday's accuracy
     runs-on: ubuntu-latest
@@ -80,7 +125,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main    # pull latest (includes newly committed picks)
+          ref: main
 
       - uses: actions/setup-python@v5
         with:
