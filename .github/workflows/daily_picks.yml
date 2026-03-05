@@ -2,7 +2,7 @@ name: Daily First Goalscorer Picks
 
 on:
   schedule:
-    - cron: '0 12 * * *'
+    - cron: '0 7 * * *'
   workflow_dispatch:
     inputs:
       date:
