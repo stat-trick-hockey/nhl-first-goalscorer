@@ -194,17 +194,6 @@
       overflow: hidden;
     }
 
-    /* ── Collapsible section ── */
-    details { margin-bottom: 0; }
-    details[open] .toggle-arrow { display: inline-block; transform: rotate(180deg); }
-    .toggle-arrow { display: inline-block; transition: transform 0.2s; float: right; }
-    .section-label-toggle {
-      cursor: pointer;
-      list-style: none;
-      user-select: none;
-    }
-    .section-label-toggle::-webkit-details-marker { display: none; }
-
     /* ── History table ── */
     .history-details-row { border-bottom: 1px solid var(--border); }
     .history-details-row:last-child { border-bottom: none; }
@@ -399,15 +388,10 @@
   <div class="divider"></div>
 
   <!-- History -->
-  <details id="history-details">
-    <summary class="section-label section-label-toggle">
-      Recent Results
-      <span class="toggle-arrow">▾</span>
-    </summary>
-    <div id="history-container">
-      <div class="loading"><span class="spinner"></span>Loading history...</div>
-    </div>
-  </details>
+  <div class="section-label">Recent Results</div>
+  <div id="history-container">
+    <div class="loading"><span class="spinner"></span>Loading history...</div>
+  </div>
 
 </main>
 
