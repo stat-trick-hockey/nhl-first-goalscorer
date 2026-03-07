@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🏒 NHL First Goalscorer Picks</title>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1e2d45;
+      --accent: #3b82f6;
+      --accent2: #60a5fa;
+      --gold: #f59e0b;
+      --green: #10b981;
+      --red: #ef4444;
+      --muted: #6b7280;
+      --text: #e5e7eb;
+      --text2: #9ca3af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0f1e3d 0%, #1a2f5e 50%, #0f1e3d 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 24px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% -20%, rgba(59,130,246,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .header-inner { position: relative; max-width: 900px; margin: 0 auto; }
+    .logo { font-size: 2.4rem; margin-bottom: 4px; }
+    h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; color: #fff; }
+    .subtitle { color: var(--text2); font-size: 0.9rem; margin-top: 4px; }
+    .date-badge {
+      display: inline-block;
+      margin-top: 10px;
+      background: rgba(59,130,246,0.15);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: var(--accent2);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Layout ── */
+    main { max-width: 900px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Picks ── */
+    .picks-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 36px;
+    }
+
+    .pick-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      align-items: center;
+      gap: 16px;
+      transition: border-color 0.15s;
+    }
+    .pick-card:hover { border-color: rgba(59,130,246,0.4); }
+    .pick-card.rank-1 {
+      background: linear-gradient(135deg, #1a2235 0%, #1e2d45 100%);
+      border-color: var(--gold);
+      box-shadow: 0 0 20px rgba(245,158,11,0.08);
+    }
+
+    .rank {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1;
+    }
+    .rank-1 .rank { color: var(--gold); }
+    .rank-medal { font-size: 1.3rem; }
+
+    .pick-info {}
+    .pick-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 3px;
+    }
+    .pick-meta {
+      font-size: 0.78rem;
+      color: var(--text2);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .tag {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 2px 7px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .tag-b2b { color: #f97316; border-color: rgba(249,115,22,0.3); }
+    .tag-home { color: var(--accent2); border-color: rgba(96,165,250,0.3); }
+    .tag-away { color: var(--text2); }
+    .tag-model { color: #a78bfa; border-color: rgba(167,139,250,0.3); }
+
+    .pick-score-wrap { text-align: right; }
+    .pick-score {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--accent2);
+      line-height: 1;
+    }
+    .rank-1 .pick-score { color: var(--gold); }
+    .score-label { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── No picks ── */
+    .empty-state {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+    .empty-sub { color: var(--text2); font-size: 0.88rem; }
+
+    /* ── Stats bar ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 36px;
+    }
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-label { font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    #history-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* ── History table ── */
+    .history-details-row { border-bottom: 1px solid var(--border); }
+    .history-details-row:last-child { border-bottom: none; }
+    .history-row-summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 16px;
+      font-size: 0.85rem;
+      transition: background 0.15s;
+    }
+    .history-row-summary::-webkit-details-marker { display: none; }
+    .history-row-summary:hover { background: var(--surface2); }
+    .summary-hit-col { display: flex; align-items: center; gap: 10px; }
+    .row-arrow { font-size: 1.3rem; color: var(--text2); transition: transform 0.2s; line-height: 1; }
+    .history-details-row[open] .row-arrow { transform: rotate(180deg); }
+    .history-details-row[open] > summary { background: var(--surface2); }
+    /* Expanded two-column layout */
+    .history-expanded {
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr;
+      gap: 0;
+      background: rgba(0,0,0,0.25);
+      padding: 12px 16px 14px;
+      gap: 0 12px;
+    }
+    .hg-divider { background: var(--border); width: 1px; }
+    .hg-col { display: flex; flex-direction: column; gap: 5px; }
+    .hg-col-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .hg-pick-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.8rem;
+      color: var(--text2);
+      padding: 2px 0;
+    }
+    .hg-pick-hit { color: var(--text); }
+    .hg-pick-rank { color: var(--muted); min-width: 20px; font-size: 0.75rem; }
+    .hg-pick-name { font-weight: 600; }
+    .hg-pick-meta { color: var(--muted); font-size: 0.73rem; }
+    .hg-no-picks { font-size: 0.78rem; color: var(--muted); }
+    .history-game-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text2);
+      padding: 2px 0;
+    }
+    .hg-game { color: var(--muted); min-width: 80px; font-size: 0.75rem; }
+    .rank-chip {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: rgba(250,204,21,0.15);
+      color: var(--gold);
+      border: 1px solid rgba(250,204,21,0.3);
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 5px;
+    }
+    .actual-hit {
+      color: #facc15;
+      font-weight: 600;
+    }
+    .history-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .history-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text2);
+      display: grid;
+      grid-template-columns: 100px 1fr 1fr 60px;
+      gap: 12px;
+    }
+    .history-row {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 100px 1fr 1fr 60px;
+      gap: 12px;
+      align-items: center;
+      font-size: 0.85rem;
+      transition: background 0.1s;
+    }
+    .history-row:last-child { border-bottom: none; }
+    .history-row:hover { background: var(--surface2); }
+    .history-date { color: var(--text2); font-size: 0.8rem; }
+    .history-name { font-weight: 600; color: var(--text); }
+    .history-actual { color: var(--text2); }
+    .hit-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+    .hit-1 { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+    .hit-3 { background: rgba(59,130,246,0.12);  color: #60a5fa;      border: 1px solid rgba(59,130,246,0.3); }
+    .hit-5 { background: rgba(245,158,11,0.12); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
+    .hit-0 { background: rgba(107,114,128,0.1); color: var(--muted); border: 1px solid var(--border); }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--accent2); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Loading ── */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ── */
+    .error-box {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 16px 20px;
+      color: #fca5a5;
+      font-size: 0.85rem;
+      margin-bottom: 24px;
+    }
+
+    .divider { height: 1px; background: var(--border); margin: 32px 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">🏒</div>
+    <h1>NHL First Goalscorer Picks</h1>
+    <div class="subtitle">stat-trick-hockey · ML-assisted predictions</div>
+    <div class="date-badge" id="today-badge">Loading...</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Today's Picks -->
+  <div class="section-label">Today's Top Picks</div>
+  <div id="picks-container">
+    <div class="loading"><span class="spinner"></span>Loading picks...</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Accuracy Stats -->
+  <div class="section-label">Accuracy — All Time</div>
+  <div id="stats-container">
+    <div class="loading"><span class="spinner"></span>Loading stats...</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- History -->
+  <div class="section-label">Recent Results</div>
+  <div id="history-container">
+    <div class="loading"><span class="spinner"></span>Loading history...</div>
+  </div>
+
+</main>
+
+<footer>
+  Picks generated daily at 7 AM ET · 
+  <a href="https://github.com/stat-trick-hockey/nhl-first-goalscorer" target="_blank">View on GitHub</a>
+  · Data: NHL API
+</footer>
+
+<script>
+  const REPO = 'stat-trick-hockey/nhl-first-goalscorer';
+  const RAW  = `https://raw.githubusercontent.com/${REPO}/main`;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function today() {
+    return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+  }
+
+  function fmtDate(d) {
+    return new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    });
+  }
+
+  function pct(v) {
+    return v != null ? (v * 100).toFixed(1) + '%' : '—';
+  }
+
+  // ── Load picks ──────────────────────────────────────────────────────────────
+
+  async function loadPicks(date) {
+    const container = document.getElementById('picks-container');
+    document.getElementById('today-badge').textContent = fmtDate(date);
+
+    try {
+      const res = await fetch(`${RAW}/picks/${date}.json`);
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      renderPicks(data.picks || []);
+    } catch (e) {
+      // Try yesterday as fallback
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yd = yesterday.toLocaleDateString('en-CA');
+      try {
+        const res2 = await fetch(`${RAW}/picks/${yd}.json`);
+        if (!res2.ok) throw new Error('no picks');
+        const data2 = await res2.json();
+        document.getElementById('today-badge').textContent = fmtDate(yd) + ' (latest)';
+        renderPicks(data2.picks || []);
+      } catch {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🎯</div>
+            <div class="empty-title">No picks yet today</div>
+            <div class="empty-sub">Picks are generated at 7 AM ET each game day.<br>Check back soon or view the <a href="https://github.com/${REPO}/tree/main/picks" style="color:#60a5fa">picks folder</a> on GitHub.</div>
+          </div>`;
+      }
+    }
+  }
+
+  function renderPicks(picks) {
+    const container = document.getElementById('picks-container');
+    if (!picks.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🏒</div>
+          <div class="empty-title">No games today</div>
+          <div class="empty-sub">The NHL has a day off. Check back tomorrow.</div>
+        </div>`;
+      return;
+    }
+
+    const medals = ['🥇', '🥈', '🥉'];
+    container.innerHTML = `<div class="picks-grid">${picks.map((p, i) => {
+      const rank = i + 1;
+      const isTop = rank === 1;
+      const medal = medals[i] || '';
+      const rankDisplay = medal
+        ? `<span class="rank-medal">${medal}</span>`
+        : `<span class="rank">#${rank}</span>`;
+
+      const score = (p.final ?? p.heuristic_score ?? 0).toFixed(1);
+      const isHome = p.is_home;
+      const isB2B  = p.is_b2b;
+      const model  = p.model_used === 'ensemble' ? '🤖 Ensemble' : '📐 Heuristic';
+      const matchup = p.matchup || '';
+
+      const tags = [
+        matchup ? `<span class="tag">${matchup}</span>` : '',
+        isHome  ? `<span class="tag tag-home">Home</span>` : `<span class="tag tag-away">Away</span>`,
+        isB2B   ? `<span class="tag tag-b2b">B2B ⚠</span>` : '',
+        `<span class="tag tag-model">${model}</span>`,
+      ].filter(Boolean).join('');
+
+      return `
+        <div class="pick-card ${isTop ? 'rank-1' : ''}">
+          <div>${rankDisplay}</div>
+          <div class="pick-info">
+            <div class="pick-name">${p.name}</div>
+            <div class="pick-meta">${tags}</div>
+          </div>
+          <div class="pick-score-wrap">
+            <div class="pick-score">${score}</div>
+            <div class="score-label">score</div>
+          </div>
+        </div>`;
+    }).join('')}</div>`;
+  }
+
+  // ── Load accuracy log ───────────────────────────────────────────────────────
+
+  async function loadAccuracy() {
+    const statsEl   = document.getElementById('stats-container');
+    const historyEl = document.getElementById('history-container');
+
+    try {
+      const res = await fetch(`${RAW}/data/accuracy_log.jsonl`);
+      if (!res.ok) throw new Error(`${res.status}`);
+      const text = await res.text();
+      const records = text.trim().split('\n')
+        .filter(Boolean)
+        .map(l => JSON.parse(l))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      if (!records.length) throw new Error('empty');
+      renderStats(records);
+      await renderHistory(records);
+    } catch {
+      const noDataMsg = `
+        <div class="empty-state" style="margin-bottom:0">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">No accuracy data yet</div>
+          <div class="empty-sub">Results will appear here after the first tracked game day.</div>
+        </div>`;
+      statsEl.innerHTML   = noDataMsg;
+      historyEl.innerHTML = noDataMsg;
+    }
+  }
+
+  function renderStats(records) {
+    const n = records.length;
+    const top1 = records.filter(r => r.top1_correct).length;
+    const top3 = records.filter(r => r.top3_correct).length;
+    const top5 = records.filter(r => r.top5_correct).length;
+    const ranks = records.map(r => r.best_rank).filter(r => r != null);
+    const avgRank = ranks.length ? (ranks.reduce((a,b) => a+b, 0) / ranks.length).toFixed(1) : '—';
+
+    document.getElementById('stats-container').innerHTML = `
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value">${pct(top1/n)}</div>
+          <div class="stat-label">Top-1 Acc</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${pct(top3/n)}</div>
+          <div class="stat-label">Top-3 Acc</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${pct(top5/n)}</div>
+          <div class="stat-label">Top-5 Acc</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${avgRank}</div>
+          <div class="stat-label">Avg Rank</div>
+        </div>
+      </div>
+      <div style="text-align:right;font-size:0.75rem;color:var(--muted);margin-top:-24px;margin-bottom:8px;">Based on ${n} tracked day${n !== 1 ? 's' : ''}</div>`;
+  }
+
+  async function renderHistory(records) {
+    const recent = [...records].reverse().slice(0, 20);
+
+    // Fetch picks files for all dates in parallel
+    const picksMap = {};
+    await Promise.all(recent.map(async r => {
+      try {
+        const res = await fetch(`${RAW}/picks/${r.date}.json`);
+        if (res.ok) {
+          const data = await res.json();
+          picksMap[r.date] = data.picks || [];
+        }
+      } catch { /* no picks file for this date */ }
+    }));
+
+    document.getElementById('history-container').innerHTML = recent.map((r, i) => {
+      const picks = picksMap[r.date] || [];
+      const pickNames = (r.game_results || []).filter(g => g.in_our_picks).map(g => g.actual_scorer);
+
+      let badge, hitClass;
+      if (r.top1_correct) {
+        badge = '#1'; hitClass = 'hit-1';
+      } else if (r.best_rank) {
+        badge = '#' + r.best_rank; hitClass = r.best_rank <= 3 ? 'hit-3' : 'hit-5';
+      } else {
+        badge = '—'; hitClass = 'hit-0';
+      }
+
+      const isOpen = i === 0 ? 'open' : '';
+
+      // Top 5 picks rows
+      const picksRows = picks.length
+        ? picks.map((p, pi) => {
+            const isActualScorer = pickNames.includes(p.name);
+            return `<div class="hg-pick-row ${isActualScorer ? 'hg-pick-hit' : ''}">
+              <span class="hg-pick-rank">#${pi + 1}</span>
+              <span class="hg-pick-name">${p.name}</span>
+              <span class="hg-pick-meta">${p.team} · ${p.matchup}</span>
+              ${isActualScorer ? '<span class="rank-chip">✓ scored first</span>' : ''}
+            </div>`;
+          }).join('')
+        : '<div class="hg-no-picks">No picks file found</div>';
+
+      // Game results rows
+      const gameRows = (r.game_results || []).map(g => {
+        const inPicks = g.in_our_picks;
+        const rankLabel = inPicks ? ` <span class="rank-chip">pick #${g.rank_in_picks}</span>` : '';
+        return `<div class="history-game-row">
+          <span class="hg-game">${g.game}</span>
+          <span class="hg-scorer ${inPicks ? 'actual-hit' : ''}">${g.actual_scorer}${rankLabel}</span>
+        </div>`;
+      }).join('');
+
+      return `
+        <details class="history-details-row" ${isOpen}>
+          <summary class="history-row-summary">
+            <span class="history-date">${fmtDate(r.date)}</span>
+            <span class="summary-hit-col">
+              <span class="hit-badge ${hitClass}">${badge}</span>
+              <span class="row-arrow">▾</span>
+            </span>
+          </summary>
+          <div class="history-expanded">
+            <div class="hg-col">
+              <div class="hg-col-label">Our Top 5 Picks</div>
+              ${picksRows}
+            </div>
+            <div class="hg-divider"></div>
+            <div class="hg-col">
+              <div class="hg-col-label">Actual First Scorers</div>
+              ${gameRows}
+            </div>
+          </div>
+        </details>`;
+    }).join('');
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  loadPicks(today());
+  loadAccuracy();
+</script>
+
+</body>
+</html>
