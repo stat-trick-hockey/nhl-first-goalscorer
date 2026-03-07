@@ -494,7 +494,7 @@
           <span>Hit</span>
         </div>
         ${recent.map(r => {
-          const actual = (r.actual_first_scorers || []).slice(0,2).join(', ') || '—';
+          const actual = (r.actual_first_scorers || []).join(', ') || '—';
           let badge, hitClass;
           if (r.top1_correct)      { badge = '#1'; hitClass = 'hit-1'; }
           else if (r.top5_correct) { badge = 'T5';  hitClass = 'hit-5'; }
