@@ -188,6 +188,10 @@
     .stat-label { font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 
     /* ── History table ── */
+    .actual-hit {
+      color: #facc15;
+      font-weight: 600;
+    }
     .history-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -494,7 +498,13 @@
           <span>Hit</span>
         </div>
         ${recent.map(r => {
-          const actual = (r.actual_first_scorers || []).join(', ') || '—';
+          const pickNames = (r.game_results || []).filter(g => g.in_our_picks).map(g => g.actual_scorer);
+          const actualSpans = (r.actual_first_scorers || []).map(name => {
+            const inPicks = pickNames.includes(name);
+            return inPicks
+              ? `<span class="actual-hit">${name}</span>`
+              : name;
+          }).join(', ') || '—';
           let badge, hitClass;
           if (r.top1_correct)      { badge = '#1'; hitClass = 'hit-1'; }
           else if (r.top5_correct) { badge = 'T5';  hitClass = 'hit-5'; }
@@ -503,7 +513,7 @@
             <div class="history-row">
               <span class="history-date">${fmtDate(r.date)}</span>
               <span class="history-name">${r.our_top1 || '—'}</span>
-              <span class="history-actual">${actual}</span>
+              <span class="history-actual">${actualSpans}</span>
               <span><span class="hit-badge ${hitClass}">${badge}</span></span>
             </div>`;
         }).join('')}
