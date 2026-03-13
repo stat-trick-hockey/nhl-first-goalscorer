@@ -1,0 +1,81 @@
+name: Train ML Model
+
+on:
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: 'Seasons to scrape (comma-separated, e.g. 20232024,20242025,20252026). Leave blank for all.'
+        required: false
+        default: ''
+      cv:
+        description: 'Run cross-validation during training?'
+        required: false
+        default: 'false'
+      feature_importance:
+        description: 'Print feature importance after training?'
+        required: false
+        default: 'true'
+
+jobs:
+  train:
+    name: Scrape + Train
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-ml.txt
+
+      - name: Scrape historical data
+        run: |
+          SEASONS="${{ github.event.inputs.seasons }}"
+          if [ -n "$SEASONS" ]; then
+            SEASON_ARGS=$(echo "$SEASONS" | tr ',' '\n' | sed 's/^/--season /' | tr '\n' ' ')
+            echo "Scraping seasons: $SEASONS"
+            python -m nhl_predictor.cli scrape $SEASON_ARGS --delay 0.3
+          else
+            echo "Scraping all seasons..."
+            python -m nhl_predictor.cli scrape --delay 0.3
+          fi
+
+      - name: Show training data size
+        run: |
+          if [ -f data/training_data.csv ]; then
+            echo "Rows scraped: $(wc -l < data/training_data.csv)"
+          else
+            echo "ERROR: training_data.csv not found"
+            exit 1
+          fi
+
+      - name: Train model
+        run: |
+          CV_FLAG=""
+          FI_FLAG=""
+          [ "${{ github.event.inputs.cv }}" = "true" ] && CV_FLAG="--cv"
+          [ "${{ github.event.inputs.feature_importance }}" = "true" ] && FI_FLAG="--feature-importance"
+          python -m nhl_predictor.cli train $CV_FLAG $FI_FLAG
+
+      - name: Confirm model saved
+        run: |
+          if [ -f data/ml_model.pkl ]; then
+            echo "Model saved: $(du -h data/ml_model.pkl | cut -f1)"
+          else
+            echo "ERROR: ml_model.pkl not found"
+            exit 1
+          fi
+
+      - name: Commit model + training data
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Train ML model"
+          file_pattern: 'data/ml_model.pkl data/training_data.csv'
+          commit_user_name: 'nhl-picks-bot'
+          commit_user_email: 'nhl-picks-bot@users.noreply.github.com'
