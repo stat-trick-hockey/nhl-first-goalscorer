@@ -39,19 +39,16 @@ jobs:
           pip install -r requirements-ml.txt
 
       - name: Smoke test NHL API
-        run: python3 -m scripts.smoke_test
+        run: PYTHONPATH=. python3 scripts/smoke_test.py
 
       - name: Scrape historical data
         timeout-minutes: 60
         run: |
           SEASONS="${{ github.event.inputs.seasons }}"
+          echo "Starting scrape for seasons: $SEASONS"
           if [ -n "$SEASONS" ]; then
-            SEASON_ARGS=$(echo "$SEASONS" | tr ',' '\n' | sed 's/^/--season /' | tr '\n' ' ')
-            echo "Scraping seasons: $SEASONS"
-            echo "Season args: $SEASON_ARGS"
-            python -m nhl_predictor.cli scrape $SEASON_ARGS --delay 0.5
+            python -m nhl_predictor.cli scrape --season ${SEASONS//,/ --season } --delay 0.5
           else
-            echo "Scraping all seasons..."
             python -m nhl_predictor.cli scrape --delay 0.5
           fi
 
