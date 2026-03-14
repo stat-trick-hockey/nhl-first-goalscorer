@@ -45,12 +45,13 @@ jobs:
         timeout-minutes: 60
         run: |
           SEASONS="${{ github.event.inputs.seasons }}"
-          echo "Starting scrape for seasons: $SEASONS"
+          echo "=== bash: about to call Python ==="
           if [ -n "$SEASONS" ]; then
             python -m nhl_predictor.cli scrape --season ${SEASONS//,/ --season } --delay 0.5
           else
             python -m nhl_predictor.cli scrape --delay 0.5
           fi
+          echo "=== bash: Python finished ==="
 
       - name: Show training data size
         run: |
