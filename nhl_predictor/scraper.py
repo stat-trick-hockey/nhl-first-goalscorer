@@ -182,6 +182,7 @@ def append_rows(rows: list[dict]):
 
 def scrape_season(season_key: str, delay: float = 0.5):
     """Scrapes all completed games from a season and appends to training CSV."""
+    print(f"=== Python: scrape_season entered, loading game IDs... ===", flush=True)
     if season_key not in SEASONS:
         raise ValueError(f"Unknown season: {season_key}. Options: {list(SEASONS.keys())}")
 
@@ -194,6 +195,7 @@ def scrape_season(season_key: str, delay: float = 0.5):
     total_rows = 0
     skipped_games = 0
 
+    print(f"=== Python: scrape_season called for {season_key} ===", flush=True)
     logger.info("Scraping season %s (%s → %s) — %d dates", season_key, start, end_date, len(dates))
     logger.info("Loaded %d already-scraped game IDs from training data", len(scraped_ids))
 
