@@ -30,6 +30,13 @@ from .model import FEATURE_NAMES, estimate_line_ranks, build_feature_vector
 
 logger = logging.getLogger(__name__)
 
+# Ensure scraper logs are visible in CI even without explicit config
+if not logger.handlers and not logging.getLogger().handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(asctime)s  %(levelname)s  %(message)s", datefmt="%H:%M:%S"))
+    logger.addHandler(_h)
+    logger.setLevel(logging.INFO)
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 TRAINING_FILE = DATA_DIR / "training_data.csv"
 
@@ -212,8 +219,11 @@ def scrape_season(season_key: str, delay: float = 0.5):
                     scraped_ids.add(game_id)
                     total_games += 1
                     total_rows  += len(rows)
+                    logger.info("  → %d rows written (total: %d games, %d rows)", len(rows), total_games, total_rows)
+                else:
+                    logger.info("  → skipped (no first goal or already scraped)")
             except Exception as e:
-                logger.error("  Failed game %d: %s", game_id, e)
+                logger.error("  Failed game %d: %s", game_id, e, exc_info=True)
 
             time.sleep(delay)
 
