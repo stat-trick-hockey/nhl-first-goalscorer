@@ -39,7 +39,7 @@ jobs:
           pip install -r requirements-ml.txt
 
       - name: Smoke test NHL API
-        run: python3 scripts/smoke_test.py
+        run: python3 -m scripts.smoke_test
 
       - name: Scrape historical data
         timeout-minutes: 60
