@@ -16,10 +16,14 @@ on:
         required: false
         default: 'true'
 
+env:
+  PYTHONUNBUFFERED: "1"
+
 jobs:
   train:
     name: Scrape + Train
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v4
@@ -35,15 +39,16 @@ jobs:
           pip install -r requirements-ml.txt
 
       - name: Scrape historical data
+        timeout-minutes: 60
         run: |
           SEASONS="${{ github.event.inputs.seasons }}"
           if [ -n "$SEASONS" ]; then
             SEASON_ARGS=$(echo "$SEASONS" | tr ',' '\n' | sed 's/^/--season /' | tr '\n' ' ')
             echo "Scraping seasons: $SEASONS"
-            python -m nhl_predictor.cli scrape $SEASON_ARGS --delay 0.3
+            python -m nhl_predictor.cli scrape $SEASON_ARGS --delay 0.5
           else
             echo "Scraping all seasons..."
-            python -m nhl_predictor.cli scrape --delay 0.3
+            python -m nhl_predictor.cli scrape --delay 0.5
           fi
 
       - name: Show training data size
@@ -56,6 +61,7 @@ jobs:
           fi
 
       - name: Train model
+        timeout-minutes: 20
         run: |
           CV_FLAG=""
           FI_FLAG=""
