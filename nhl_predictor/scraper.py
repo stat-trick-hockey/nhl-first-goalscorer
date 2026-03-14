@@ -195,14 +195,20 @@ def scrape_season(season_key: str, delay: float = 0.5):
     skipped_games = 0
 
     logger.info("Scraping season %s (%s → %s) — %d dates", season_key, start, end_date, len(dates))
+    logger.info("Loaded %d already-scraped game IDs from training data", len(scraped_ids))
 
-    for date in dates:
+    for i, date in enumerate(dates):
+        if i % 10 == 0:
+            logger.info("Progress: date %d/%d (%s)", i + 1, len(dates), date)
         try:
             games = api.get_games_for_date(date)
         except Exception as e:
             logger.warning("Failed to get schedule for %s: %s", date, e)
             time.sleep(delay)
             continue
+
+        if games:
+            logger.info("  %s — %d game(s)", date, len(games))
 
         for game in games:
             game_id = game["game_id"]
