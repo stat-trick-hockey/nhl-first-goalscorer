@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🏒 NHL First Goalscorer Projections</title>
+  <title>🏒 NHL First Goalscorer Picks</title>
   <style>
     :root {
       --bg: #0a0e1a;
@@ -363,8 +363,8 @@
 <header>
   <div class="header-inner">
     <div class="logo">🏒</div>
-    <h1>NHL First Goalscorer Projections</h1>
-    <div class="subtitle">stat-trick-hockey · ML-assisted projections</div>
+    <h1>NHL First Goalscorer Picks</h1>
+    <div class="subtitle">stat-trick-hockey · ML-assisted predictions</div>
     <div class="date-badge" id="today-badge">Loading...</div>
   </div>
 </header>
@@ -398,7 +398,7 @@
 <footer>
   Picks generated daily at 7 AM ET · 
   <a href="https://github.com/stat-trick-hockey/nhl-first-goalscorer" target="_blank">View on GitHub</a>
-  · Data: NHL API || These picks are for entertainment purposes only and do not constitute betting advice. ||
+  · Data: NHL API
 </footer>
 
 <script>
@@ -475,7 +475,7 @@
         ? `<span class="rank-medal">${medal}</span>`
         : `<span class="rank">#${rank}</span>`;
 
-      const score = (p.final ?? p.heuristic_score ?? 0).toFixed(1);
+      const score = (p.score ?? p.final ?? p.heuristic_score ?? 0).toFixed(1);
       const isHome = p.is_home;
       const isB2B  = p.is_b2b;
       const model  = p.model_used === 'ensemble' ? '🤖 Ensemble' : '📐 Heuristic';
