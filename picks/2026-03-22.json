@@ -1,6 +1,6 @@
 {
   "date": "2026-03-22",
-  "generated_at": "2026-03-22T14:52:25.643465Z",
+  "generated_at": "2026-03-22T15:02:22.121759Z",
   "model": "NHL First Goalscorer Predictor v2.0",
   "weights": {
     "season_goals_per_game": 0.2,
