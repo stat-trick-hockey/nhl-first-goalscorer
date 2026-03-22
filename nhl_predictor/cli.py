@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 def cmd_predict(args):
     from pathlib import Path
 
-    from .predict import format_json, format_table, run_predictions
+    from .predict import format_anytime_json, format_json, format_table, run_anytime_predictions, run_predictions
 
     results = run_predictions(
         date=args.date,
@@ -45,6 +45,15 @@ def cmd_predict(args):
             out_file = picks_dir / f"{date}.json"
             out_file.write_text(output)
             print(f"\n Saved to {out_file}", file=sys.stderr)
+
+            # Also generate anytime picks
+            anytime_results = run_anytime_predictions(date=date, top_n=args.top)
+            if anytime_results:
+                anytime_dir = Path(__file__).parent.parent / "anytime"
+                anytime_dir.mkdir(parents=True, exist_ok=True)
+                anytime_file = anytime_dir / f"{date}.json"
+                anytime_file.write_text(format_anytime_json(anytime_results, date))
+                print(f"\n Saved anytime picks to {anytime_file}", file=sys.stderr)
     else:
         print(format_table(results, date))
         if args.save:
@@ -53,6 +62,15 @@ def cmd_predict(args):
             out_file = picks_dir / f"{date}.json"
             out_file.write_text(format_json(results, date))
             print(f"\n Saved to {out_file}")
+
+            # Also generate anytime picks
+            anytime_results = run_anytime_predictions(date=date, top_n=args.top)
+            if anytime_results:
+                anytime_dir = Path(__file__).parent.parent / "anytime"
+                anytime_dir.mkdir(parents=True, exist_ok=True)
+                anytime_file = anytime_dir / f"{date}.json"
+                anytime_file.write_text(format_anytime_json(anytime_results, date))
+                print(f"\n Saved anytime picks to {anytime_file}")
 
 
 def cmd_track(args):
