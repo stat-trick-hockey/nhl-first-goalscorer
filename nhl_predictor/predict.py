@@ -243,24 +243,34 @@ def run_anytime_predictions(date: Optional[str] = None, top_n: int = 5, verbose:
                 if season.get("games_played", 0) == 0:
                     continue
 
-                # Use combined_score (ensemble if ML model available)
-                # Pass line_rank=1 for all players so line bonus doesn't penalise
-                # lower-line players — anytime scoring is volume-focused
-                scores = combined_score(
-                    season       = season,
-                    recent       = recent,
-                    line_rank    = 1,
-                    is_home      = is_home,
-                    goalie_factor= goalie_factor,
-                    goalie_sv_pct= goalie_sv,
-                    b2b_factor   = b2b_factor,
-                    is_b2b       = is_b2b,
-                )
+                gpg   = season.get("goals_per_game", 0)
+                rgpg  = recent.get("recent_goals_per_game", 0)
+                sog   = season.get("shots_per_game", 0)
+                rsog  = recent.get("recent_shots_per_game", sog)
+                ppg   = season.get("pp_goals_per_game", 0)
+                gp    = season.get("games_played", 0)
 
-                gpg  = season.get("goals_per_game", 0)
-                rgpg = recent.get("recent_goals_per_game", 0)
-                sog  = season.get("shots_per_game", 0)
-                ppg  = season.get("pp_goals_per_game", 0)
+                # Anytime heuristic: volume-focused, no line rank factor
+                # Normalise each component 0–100
+                s_gpg   = min(gpg  / 0.55, 1.0) * 100
+                s_rgpg  = min(rgpg / 0.60, 1.0) * 100
+                s_sog   = min(sog  / 5.5,  1.0) * 100
+                s_rsog  = min(rsog / 6.0,  1.0) * 100
+                s_ppg   = min(ppg  / 0.25, 1.0) * 100
+                # Goalie & B2B context still apply
+                s_goalie = min(max((goalie_factor - 0.85) / (1.35 - 0.85), 0.0), 1.0) * 100
+                s_b2b    = min(max((b2b_factor   - 0.80) / (1.00 - 0.80), 0.0), 1.0) * 100
+
+                anytime_score = round(
+                    0.28 * s_gpg   +
+                    0.20 * s_rgpg  +
+                    0.20 * s_sog   +
+                    0.12 * s_rsog  +
+                    0.10 * s_ppg   +
+                    0.06 * s_goalie +
+                    0.04 * s_b2b,
+                    2
+                )
 
                 all_candidates.append({
                     "player_id":             pid,
@@ -270,15 +280,15 @@ def run_anytime_predictions(date: Optional[str] = None, top_n: int = 5, verbose:
                     "home_away":             "Home" if is_home else "Away",
                     "position":              player.get("position", "F"),
                     "line":                  line,
-                    "score":                 scores["final"],
-                    "heuristic_score":       scores["heuristic"],
-                    "ml_score":              scores["ml"],
-                    "model_used":            scores["model_used"],
+                    "score":                 anytime_score,
+                    "heuristic_score":       anytime_score,
+                    "ml_score":              None,
+                    "model_used":            "anytime_heuristic",
                     "goals_per_game":        round(gpg,  3),
                     "recent_goals_per_game": round(rgpg, 3),
                     "shots_per_game":        round(sog,  2),
                     "pp_goals_per_game":     round(ppg,  3),
-                    "games_played":          season.get("games_played", 0),
+                    "games_played":          gp,
                     "goals":                 season.get("goals", 0),
                     "is_b2b":                is_b2b,
                     "opposing_goalie":       goalie_name,
