@@ -75,6 +75,36 @@
     }
 
     /* ── Picks ── */
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px 0;
+      background: none;
+      border: none;
+      border-radius: 7px;
+      color: var(--text2);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tab-btn.active {
+      background: var(--surface2);
+      color: var(--text);
+    }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
     .picks-grid {
       display: flex;
       flex-direction: column;
@@ -373,8 +403,19 @@
 
   <!-- Today's Picks -->
   <div class="section-label">Today's Top Picks</div>
-  <div id="picks-container">
-    <div class="loading"><span class="spinner"></span>Loading picks...</div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('first-goal')">🥇 First Goalscorer</button>
+    <button class="tab-btn" onclick="switchTab('anytime')">🚨 Anytime Goalscorer</button>
+  </div>
+  <div id="tab-first-goal" class="tab-panel active">
+    <div id="picks-container">
+      <div class="loading"><span class="spinner"></span>Loading picks...</div>
+    </div>
+  </div>
+  <div id="tab-anytime" class="tab-panel">
+    <div id="anytime-container">
+      <div class="loading"><span class="spinner"></span>Loading picks...</div>
+    </div>
   </div>
 
   <div class="divider"></div>
@@ -431,7 +472,7 @@
       const res = await fetch(`${RAW}/picks/${date}.json`);
       if (!res.ok) throw new Error(`${res.status}`);
       const data = await res.json();
-      renderPicks(data.picks || []);
+      renderPicks(data.picks || [], 'picks-container');
     } catch (e) {
       // Try yesterday as fallback
       const yesterday = new Date();
@@ -442,7 +483,7 @@
         if (!res2.ok) throw new Error('no picks');
         const data2 = await res2.json();
         document.getElementById('today-badge').textContent = fmtDate(yd) + ' (latest)';
-        renderPicks(data2.picks || []);
+        renderPicks(data2.picks || [], 'picks-container');
       } catch {
         container.innerHTML = `
           <div class="empty-state">
@@ -454,8 +495,8 @@
     }
   }
 
-  function renderPicks(picks) {
-    const container = document.getElementById('picks-container');
+  function renderPicks(picks, containerId = 'picks-container') {
+    const container = document.getElementById(containerId);
     if (!picks.length) {
       container.innerHTML = `
         <div class="empty-state">
@@ -640,8 +681,45 @@
     }).join('');
   }
 
+  // ── Tab switcher ───────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', (i === 0 && tab === 'first-goal') || (i === 1 && tab === 'anytime'));
+    });
+    document.getElementById('tab-first-goal').classList.toggle('active', tab === 'first-goal');
+    document.getElementById('tab-anytime').classList.toggle('active', tab === 'anytime');
+  }
+
+  // ── Load anytime picks ──────────────────────────────────────────────────────
+  async function loadAnytime(date) {
+    const container = document.getElementById('anytime-container');
+    try {
+      const res = await fetch(`${RAW}/anytime/${date}.json`);
+      if (!res.ok) throw new Error('not found');
+      const data = await res.json();
+      renderPicks(data.picks || [], 'anytime-container');
+    } catch {
+      // try yesterday
+      const yd = yesterday();
+      try {
+        const res2 = await fetch(`${RAW}/anytime/${yd}.json`);
+        if (!res2.ok) throw new Error('not found');
+        const data2 = await res2.json();
+        renderPicks(data2.picks || [], 'anytime-container');
+      } catch {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🚨</div>
+            <div class="empty-title">No anytime picks yet</div>
+            <div class="empty-sub">Check back after picks are generated.</div>
+          </div>`;
+      }
+    }
+  }
+
   // ── Init ───────────────────────────────────────────────────────────────────
   loadPicks(today());
+  loadAnytime(today());
   loadAccuracy();
 </script>
 
