@@ -519,7 +519,9 @@
       const score = (p.score ?? p.final ?? p.heuristic_score ?? 0).toFixed(1);
       const isHome = p.is_home;
       const isB2B  = p.is_b2b;
-      const model  = p.model_used === 'ensemble' ? '🤖 Ensemble' : '📐 Heuristic';
+      const model  = p.model_used === 'ensemble' ? '🤖 Ensemble'
+                    : p.model_used === 'anytime_heuristic' ? '📊 Volume'
+                    : '📐 Heuristic';
       const matchup = p.matchup || '';
 
       const tags = [
