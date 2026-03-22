@@ -170,6 +170,128 @@ def run_predictions(date: Optional[str] = None, top_n: int = 5, verbose: bool = 
     return all_candidates[:top_n]
 
 
+def run_anytime_predictions(date: Optional[str] = None, top_n: int = 5, verbose: bool = False) -> list[dict]:
+    """
+    Anytime goalscorer pipeline — same as first goalscorer but:
+    - Scores all line ranks equally (no line_bonus weighting)
+    - Ranks by season goals/game + recent form + shots (volume-focused)
+    - Returns top_n candidates across all games
+    """
+    target_date = date or datetime.today().strftime("%Y-%m-%d")
+
+    games = api.get_games_for_date(target_date)
+    if not games:
+        return []
+
+    all_candidates = []
+
+    for game in games:
+        home = game["home_team_abbr"]
+        away = game["away_team_abbr"]
+
+        try:
+            context = get_game_context(game, target_date)
+        except Exception:
+            context = {
+                "home": {"b2b_factor": 1.0, "is_b2b": False, "goalie_factor": 1.0,
+                         "goalie_info": {"name": "?", "save_pct": LEAGUE_AVG_SV_PCT, "gaa": 2.98, "factor": 1.0}},
+                "away": {"b2b_factor": 1.0, "is_b2b": False, "goalie_factor": 1.0,
+                         "goalie_info": {"name": "?", "save_pct": LEAGUE_AVG_SV_PCT, "gaa": 2.98, "factor": 1.0}},
+            }
+
+        for side in ("home", "away"):
+            team_abbr = home if side == "home" else away
+            opp_abbr  = away if side == "home" else home
+            is_home   = (side == "home")
+            ctx       = context[side]
+            goalie_factor = ctx["goalie_factor"]
+            goalie_sv     = ctx["goalie_info"]["save_pct"]
+            b2b_factor    = ctx["b2b_factor"]
+            is_b2b        = ctx["is_b2b"]
+            goalie_name   = ctx["goalie_info"]["name"]
+
+            try:
+                forwards = filter_healthy_forwards(team_abbr)
+            except Exception:
+                forwards = api.get_roster(team_abbr)
+            if not forwards:
+                continue
+
+            season_stats = {}
+            for i, player in enumerate(forwards):
+                pid = player["player_id"]
+                season_stats[pid] = api.get_player_season_stats(pid)
+                if i % 5 == 4:
+                    time.sleep(0.25)
+
+            line_ranks = estimate_line_ranks(forwards, season_stats)
+
+            # For anytime: fetch recent form for all lines, not just 1-2
+            recent_stats = {}
+            for i, player in enumerate(forwards):
+                pid = player["player_id"]
+                recent_stats[pid] = api.get_recent_form(pid)
+                if i % 5 == 4:
+                    time.sleep(0.25)
+
+            for player in forwards:
+                pid    = player["player_id"]
+                season = season_stats.get(pid, {})
+                recent = recent_stats.get(pid, {})
+                line   = line_ranks.get(pid, 4)
+
+                if season.get("games_played", 0) == 0:
+                    continue
+
+                # Use combined_score (ensemble if ML model available)
+                # Pass line_rank=1 for all players so line bonus doesn't penalise
+                # lower-line players — anytime scoring is volume-focused
+                scores = combined_score(
+                    season       = season,
+                    recent       = recent,
+                    line_rank    = 1,
+                    is_home      = is_home,
+                    goalie_factor= goalie_factor,
+                    goalie_sv_pct= goalie_sv,
+                    b2b_factor   = b2b_factor,
+                    is_b2b       = is_b2b,
+                )
+
+                gpg  = season.get("goals_per_game", 0)
+                rgpg = recent.get("recent_goals_per_game", 0)
+                sog  = season.get("shots_per_game", 0)
+                ppg  = season.get("pp_goals_per_game", 0)
+
+                all_candidates.append({
+                    "player_id":             pid,
+                    "name":                  player["name"],
+                    "team":                  team_abbr,
+                    "opponent":              opp_abbr,
+                    "home_away":             "Home" if is_home else "Away",
+                    "position":              player.get("position", "F"),
+                    "line":                  line,
+                    "score":                 scores["final"],
+                    "heuristic_score":       scores["heuristic"],
+                    "ml_score":              scores["ml"],
+                    "model_used":            scores["model_used"],
+                    "goals_per_game":        round(gpg,  3),
+                    "recent_goals_per_game": round(rgpg, 3),
+                    "shots_per_game":        round(sog,  2),
+                    "pp_goals_per_game":     round(ppg,  3),
+                    "games_played":          season.get("games_played", 0),
+                    "goals":                 season.get("goals", 0),
+                    "is_b2b":                is_b2b,
+                    "opposing_goalie":       goalie_name,
+                    "goalie_sv_pct":         goalie_sv,
+                    "goalie_factor":         goalie_factor,
+                    "matchup":               f"{away} @ {home}",
+                    "game_id":               game["game_id"],
+                })
+
+    all_candidates.sort(key=lambda x: x["score"], reverse=True)
+    return all_candidates[:top_n]
+
+
 # ─── Output formatters ────────────────────────────────────────────────────────
 
 
@@ -221,6 +343,16 @@ def format_json(results: list[dict], date: str) -> str:
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "model":        "NHL First Goalscorer Predictor v2.0",
         "weights":      WEIGHTS,
+        "picks":        results,
+    }
+    return json.dumps(output, indent=2)
+
+
+def format_anytime_json(results: list[dict], date: str) -> str:
+    output = {
+        "date":         date,
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "model":        "NHL Anytime Goalscorer Predictor v2.0",
         "picks":        results,
     }
     return json.dumps(output, indent=2)
